@@ -53,3 +53,9 @@ address? Sort all matching addresses over non-matching addresses.
 are sorted first.
 
 Finally, update the `AAAA` record with the highest-ranked address according to these criteria.
+
+Note that if the currently registered address is still a candidate, it will be ranked first and the `AAAA` record
+will not change. In the event of a prefix change, an address with the same host part will be chosen if it exists
+(e.g. if the registered address was EUI-64 before it will be EUI-64 still). In the event of a prefix change where
+you have addresses from multiple providers (e.g. an ISP-provided address and a Hurricane Electric tunnel), then
+an address from the same provider will probably be selected for the update.
