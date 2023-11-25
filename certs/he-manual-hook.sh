@@ -107,7 +107,7 @@ TXTNAME=$(chase_cname _acme-challenge.$CERTBOT_DOMAIN $DNS_SERVER)
 echo Updating $TXTNAME ...
 update_txt $TXTNAME $txtvalue $(get_api_key $TXTNAME $CRED_FILE)
 
-# 4. Check periodically until record propogates
+# 4. Check periodically until record propagates
 if [ "$1" = "auth" ]; then
         checknum=0
         while [ "$checknum" -lt "$DNS_MAX_CHECKS" ]; do
