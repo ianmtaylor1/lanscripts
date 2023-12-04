@@ -44,18 +44,23 @@ ranking them according to some criteria, then selecting the best address. This r
 the current IPv6 address in Hurricane Electric's `AAAA` record (the "registered" address), so it depends on you manually 
 setting one value at the beginning.
 
-First, the script finds "candidates": any globally routable IPv6 address on the specified interface(s) not marked 
+First, the script finds "candidates": any globally routable, non-ULA IPv6 address on the specified interface(s) not marked 
 "temporary" or "deprecated" by the `ip` command. Then it ranks them according to these sorting values:
 
 1. Sort first by host identifier. Is the host identifier (low 64 bits) of the address the same as the currently registered
 address? Sort all matching addresses over non-matching addresses.
 2. Sort next by prefix match length. Sort addresses so that ones having a longer prefix in common with the registered addresss
 are sorted first.
+3. Sort last by smallest host identifier.
 
 Finally, update the `AAAA` record with the highest-ranked address according to these criteria.
 
-Note that if the currently registered address is still a candidate, it will be ranked first and the `AAAA` record
-will not change. In the event of a prefix change, an address with the same host part will be chosen if it exists
-(e.g. if the registered address was EUI-64 before it will be EUI-64 still). In the event of a prefix change where
-you have addresses from multiple providers (e.g. an ISP-provided address and a Hurricane Electric tunnel), then
-an address from the same provider will probably be selected for the update.
+The purpose of these rules is to keep the same address whenever possible and keep the same "kind" of address when it's not available. 
+If the currently registered address is still a candidate address, then it will (1) match the host id and (2) have the longest possible 
+prefix agreement, 64 bits. So it will be chosen as the preferred candidate and no update will be done. In the event of a prefix change, 
+an address with the same host part will be chosen if it exists (e.g. if the registered address was EUI-64 before it will be EUI-64 
+still). In the event of a prefix change where you have addresses from multiple providers (e.g. an ISP-provided address and a Hurricane 
+Electric tunnel), then an address from the same provider will probably be selected for the update. In particular, they are designed 
+to work well with Linux netfilter rules in the forward chain matching on the host id, or 
+[OPNsense dynamic IPv6 host aliases](https://docs.opnsense.org/manual/aliases.html#dynamic-ipv6-host).
+
