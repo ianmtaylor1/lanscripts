@@ -5,17 +5,17 @@ that can perform DNS-01 challenges to issue certificates.
 
 ## How to use
 
-1. Edit the parameters at the top of the script, particularly the location of your credentials file. This file
-contains Hurricane Electric DDNS api keys for your TXT records.
-2. Run
+1. Edit the parameters at the top of the script, if necessary. Defaults will work on systems with `dig` installed.
+2. Create credentials file (see below)
+3. Run
 ```
 certbot certonly \
     -d myserver.example.com \
     --preferred-challenges dns --manual \
-    --manual-auth-hook '/path/to/he-manual-hook.sh auth' \
-    --manual-cleanup-hook '/path/to/he-manual-hook.sh cleanup'
+    --manual-auth-hook '/path/to/he-manual-hook.sh auth /path/to/creds.txt' \
+    --manual-cleanup-hook '/path/to/he-manual-hook.sh cleanup /path/to/creds.txt'
 ```
-replacing the domain and your path to the script. Optionally also specify a `--deploy-hook`.
+replacing the domain and your path to the script. Optionally also specify a `--deploy-hook` to install the certificate.
 
 ## CNAME chasing
 
