@@ -1,28 +1,21 @@
 #!/usr/bin/env sh
 
-# DNS servers. DNS_SERVER is used to trace CNAMES to the TXT record that
-# needs to be updated. Script waits until both DNS_SERVER and
-# DNS_SERVER_SECONDARY have the updated value before returning. Best to
-# supply servers from two different providers.
-DNS_SERVER=one.one.one.one
-DNS_SERVER_SECONDARY=dns.google
-
-# Text file containing dyn.dns.he.net API credentials. Each line contains
-# the full name of the TXT record and the API update key, spearated by
-# whitespace.
-CRED_FILE=/mnt/acme/scripts/creds.txt
-
 # After updating the TXT record, check every DNS_CHECK_INTERVAL seconds
 # up to DNS_MAX_CHECKS times for propagation.
-DNS_CHECK_INTERVAL=30
-DNS_MAX_CHECKS=11
+DNS_CHECK_INTERVAL=10
+DNS_MAX_CHECKS=31
 
+# Which program to use for recursive DNS lookups?
+# Known working:
+#   dig +trace
+#   drill -T
+DIGTRACE="dig +trace"
 
 ###############################################################################
 usage() {
         echo USAGE:
         echo
-        echo "$0 <action>"
+        echo "$(basename $0) <action> <credfile>"
         echo
         echo "where <action> is either 'auth' or 'cleanup'"
 }
@@ -31,26 +24,31 @@ unquote() {
         sed -e 's/^"//' -e 's/"$//'
 }
 
-# USAGE: get_record example.com AAAA 8.8.8.8
+drop_dot() {
+        sed -e 's/\.$//'
+}
+
+# Get the value of a DNS record using a recursive lookup
+# USAGE: get_record example.com AAAA
 get_record() {
         local name=$1
         local rtype=$2
-        local server=$3
-        dig +short $name @$server $rtype
+        $DIGTRACE $rtype $name | \
+                awk -v name="$name" -v rtype="$rtype" \
+                '($1 == name || $1 == name".") && $4 == rtype {print $5}'
 }
 
 # Follows a trail of CNAME records from the given input name until there are
 # no more CNAMES, returning the name having no more CNAME records.
-# USAGE: chase_cname www.example.com 8.8.8.8
+# USAGE: chase_cname www.example.com
 chase_cname() {
         local name=$1
-        local server=$2
-        local cname=$(get_record $name CNAME $server)
+        local cname=$(get_record $name CNAME)
         while [ ! -z "$cname" ]; do
-                name=${cname%.} # Remove any trailing period
-                cname=$(get_record $name CNAME $server)
+                name=$cname
+                cname=$(get_record $name CNAME)
         done
-        echo $name
+        echo $name | drop_dot
 }
 
 # Updates a Hurricane Electric TXT record to the specified value
@@ -83,39 +81,45 @@ get_api_key() {
 
 ###############################################################################
 
-# 0. Verify usage
-if [ ! "$#" = "1" ]; then
+# 0. Verify usage and parse arguments
+if [ ! "$#" = "2" ]; then
         usage $@
         exit 1
 fi
 if [ ! "$1" = "auth" ] && [ ! "$1" = "cleanup" ]; then
         usage $@
         exit 1
+else
+        ACTION="$1"
+fi
+if [ ! -f "$2" ]; then
+        usage $@
+        exit 1
+else
+        CRED_FILE="$2"
 fi
 
 # 1. Determine whether we are validating or cleaning up
-if [ "$1" = "cleanup" ]; then
+if [ "$ACTION" = "cleanup" ]; then
         txtvalue="completed"
 else
         txtvalue=$CERTBOT_VALIDATION
 fi
 
 # 2. Determine the TXT record we need to update
-TXTNAME=$(chase_cname _acme-challenge.$CERTBOT_DOMAIN $DNS_SERVER)
+TXTNAME=$(chase_cname _acme-challenge.$CERTBOT_DOMAIN)
 
 # 3. Update the TXT record with the provided value from certbot
 echo Updating $TXTNAME ...
 update_txt $TXTNAME $txtvalue $(get_api_key $TXTNAME $CRED_FILE)
 
-# 4. Check periodically until record propagates
-if [ "$1" = "auth" ]; then
+# 4. Check periodically until record propogates
+if [ "$ACTION" = "auth" ]; then
         checknum=0
         while [ "$checknum" -lt "$DNS_MAX_CHECKS" ]; do
                 echo Waiting for DNS propagation...
                 sleep $DNS_CHECK_INTERVAL
-                [ "$(get_record $TXTNAME TXT $DNS_SERVER | unquote)" = "$txtvalue" ] \
-                        && [ "$(get_record $TXTNAME TXT $DNS_SERVER_SECONDARY | unquote)" = "$txtvalue" ] \
-                        && break
+                [ "$(get_record $TXTNAME TXT | unquote)" = "$txtvalue" ] && break
                 checknum=$((checknum+1))
         done
         if [ "$checknum" = "$DNS_MAX_CHECKS" ]; then
@@ -125,4 +129,3 @@ if [ "$1" = "auth" ]; then
 fi
 
 echo Done.
-
