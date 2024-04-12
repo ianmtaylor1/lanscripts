@@ -1,6 +1,6 @@
 # Dynamic DNS Update
 
-IPv4 and IPv6 Dynamic DNS on [Hurricane Electric DNS](https://dns.he.net/).
+IPv4 and IPv6 Dynamic DNS on [Hurricane Electric DNS](https://dns.he.net/). See the [docs](https://dns.he.net/docs.html) for more information about the API.
 
 ## Requirements
 
