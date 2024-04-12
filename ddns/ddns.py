@@ -43,8 +43,15 @@ def update_he(domain, key, ip):
     # Update DDNS entry with Hurricane Electric DNS (IPv4 or IPv6)
     response = requests.post("https://dyn.dns.he.net/nic/update",
             {"hostname":domain, "password":key, "myip":ip})
-    if not response:
-        raise Exception("Error {} updating DNS".format(response.status_code))
+    # Check errors
+    response.raise_for_status()
+    # Return True if address updated, False if no change
+    if response.text[:4] == "good":
+        return True
+    elif response.text[:5] == "nochg":
+        return False
+    else:
+        raise Exception("DNS Update Failed: {}".format(response.text))
 
 def get_candidates_v6(iface = ""):
     # Get list of global IPv6 addresses on given interface
@@ -88,12 +95,12 @@ changed_v4 = False
 changed_v6 = False
 
 if registered_v4 != current_v4:
-    update_he(domain, update_key, current_v4)
-    changed_v4 = True
+    if update_he(domain, update_key, current_v4):
+        changed_v4 = True
 
 if registered_v6 != current_v6:
-    update_he(domain, update_key, current_v6)
-    changed_v6 = True
+    if update_he(domain, update_key, current_v6):
+        changed_v6 = True
 
 
 if changed_v4 or changed_v6:
