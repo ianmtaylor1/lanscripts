@@ -1,0 +1,2 @@
+username=sambauser
+password=pa$$w0rd

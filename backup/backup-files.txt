@@ -1,0 +1,3 @@
+/home/admin
+/etc/myservice.conf
+/root
