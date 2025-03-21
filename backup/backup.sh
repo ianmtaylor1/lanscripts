@@ -73,7 +73,7 @@ FILE=$(date +$FILEFORMAT)
 DEST=$MOUNT/$FILE
 
 # Back up files
-tar -cf "$DEST" --files-from "$FILESFROM"
+tar -cf "$DEST" --xattrs --selinux --acls --files-from "$FILESFROM"
 
 # Delete old backups beyond the keep threshold
 # TODO
